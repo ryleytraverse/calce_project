@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib as mpl
+from sklean.metrics import mean_absolute_error, mean_squared_error, median_absolute_error, mean_absolute_percentage_error, r2_score
 
 # Extract data form excel spreadsheets based on date and fix how it was originally stored
 def extract_data(cs2_dates:list, foulder_name:str, sheet_name:str) -> pd.DataFrame:
@@ -127,3 +128,141 @@ def calculate_soc_soh(df:pd.DataFrame, df_subcycle:pd.DataFrame, nominal_capacit
             df_sub = pd.concat([df_sub_charge, df_sub_discharge])
             df_final = pd.concat([df_final, df_sub])
     return df_final, df
+
+
+def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound, soh_upper_bound, soc_cycle_list, soh_break): 
+    df_soh = pd.DataFrame(columns=['cycle_num', 'for_soc', 'charge_time', 'soh', 'soc'])
+    X = np.array([])
+    cycle_list = list(df.Cycle_Index.unique())
+    for c in cycle_list:
+        if add_soc:
+            df_cycle = df[df['Cycle_Index']==c] 
+            if c in soc_cycle_list:
+                for x in range(df_cycle.shape[0]): 
+                    if x+1<seq_len:
+                        len_diff = seq_len-x-1
+                        add_list = [-999] * len_diff 
+                        df_scale = df_cycle.iloc[:x+1]
+                        soh_label = float(df_scale['State_of_Health'].iloc[-1])
+                        #soh_label = float(0)
+                        df_scale[features] = scaler.transform(df_scale[features])
+                    else:
+                        start = x+1-seq_len
+                        add_list = []
+                        df_scale = df_cycle.iloc[start:x+1]
+                        if len(df_scale[(df_scale['Step_Index'].isin([2, 4])) & (df_scale['Voltage(V)'] >= soh_lower_bound) & (df_scale['Voltage(V)'] <= soh_upper_bound)]) == seq_len:
+                            soh_label = float(df_scale['State_of_Health'].iloc[-1])
+                        else:
+                            soh_label = float(df_scale['State_of_Health'].iloc[-1])
+                            #soh_label = float(0)
+                        df_scale[features] -scaler.transform(df_scale[features]) 
+                    values_to_add_current = add_list + list(df_scale[features[0]])
+                    values_to_add_voltage = add_list + list(df_scale[features[1]])
+                    values_to_add_temp = add_list + list(df_scale[features[2]])
+                    values_to_add = np.array([np.array(values_to_add_current), np.array(values_to_add_voltage), np.array(values_to_add_temp)]) 
+                    values_to_add = values_to_add.transpose()
+                    X = np.append(X, values_to_add)
+                    df_soh.loc[len(df_soh)] = [c, True, float(df_scale['Test_Time(s)'].iloc[-1]), soh_label, float(df_scale['State_of_Charge'].iloc[-1])]
+        if add_soh:
+            df_cycle = df[df['Cycle_Index']==c] 
+            df_voltage_range = df_cycle[(df_cycle['Step_Index'].isin([2, 4])) & (df_cycle['Voltage(V)'] >= soh_lower_bound) & (df_cycle['Voltage(V)'] <= soh_upper_bound)]
+            length_vr = df_voltage_range.shape[0]
+            if length_vr <= seq_len:
+                df_scale = df_cycle[(df_cycle['Step_Index'].isin([2, 4])) & (df_cycle['Voltage(V)'] >= soh_lower_bound)].iloc[:seq_len] 
+                df_scale[features] = scaler.transform(df_scale[features])
+                X = np.append(X, df_scale[features].to_numpy())
+                df_soh.loc[len(df_soh)] [c, False, float(df_scale['Test_Time(s)'].iloc[-1]), float(df_scale['State_of_Health'].iloc[-1]), float(df_scale['State_of_Charge'].iloc[-1])]
+            else:
+                for x in range(0, length_vr-seq_len+1, soh_break):
+                    df_scale = df_voltage_range.iloc[x:seq_len+x]
+                    df_scale[features] = scaler.transform(df_scale[features])
+                    X = np.append(X, df_scale[features].to_numpy())
+                    df_soh.loc[len(df_soh)] [c, False, float(df_scale['Test_Time(s)'].iloc[-1]), float(df_scale['State_of_Health'].iloc[-1]), float(df_scale['State_of_Charge'].iloc[-1])]
+
+    X = np.reshape(X, (-1, seq_len, len(features)))
+    y_soh = df_soh['soh'].to_numpy()
+    y_soc = df_soh['soc'].to_numpy()
+
+    return df_soh, X, y_soh, y_soc
+
+
+def print_results(df_results, title_name, show_soc, show_soh):
+    if show_soh:
+        y_soh = df_results[df_results['for_soc'] == False]['soh'] 
+        pred_soh = df_results[df_results['for_soc'] == False]['soh prediction']
+        print('SOH Predictions:')
+        print('Mean Absolute Error:', mean_absolute_error(y_soh, pred_soh))
+        print('Root Mean Squared Error:', np.sqrt(mean_squared_error(y_soh, pred_soh))) 
+        print('Median Absolute Error:', median_absolute_error(y_soh, pred_soh))
+        print('Mean Absolute Percentage Error:', mean_absolute_percentage_error(y_soh, pred_soh)) 
+        print('R Squared:', r2_score(y_soh, pred_soh))
+        print()
+    if show_soc:
+        y_soc = df_results[df_results['for_soc'] == True]['soc']
+        pred_soc = df_results[df_results['for_soc'] == True]['soc_prediction']
+        print('SOC Predictions:')
+        print('Mean Absolute Error:', mean_absolute_error(y_soc, pred_soc))
+        print('Root Mean Squared Error: ', np.sqrt(mean_squared_error(y_soc, pred_soc))) 
+        print('Median Absolute Error:', median_absolute_error(y_soc, pred_soc))
+        print('Mean Absolute Percentage Error:', mean_absolute_percentage_error(y_soc, pred_soc)) 
+        print('R Squared:', r2_score(y_soc, pred_soc))
+
+
+def plot_soc_stuff(df, data_name):
+    df['soc_abs_error'] = abs(df['soc']-df['soc_prediction'])
+    soc_results_by_cycle = df.groupby('cycle_num')['soc_abs_error'].mean().reset_index() 
+    plt.scatter(soc_results_by_cycle['cycle_num'], soc_results_by_cycle['soc_abs_error'], color='blue')
+    plt.title('SOC Mean Absolute Error Over Cycle')
+    plt.xlabel('Cycle')
+    plt.ylabel('SOC Mean Absolute Error')
+    plt.show()
+
+    df_temp_testing = df[df['is_charge'] == True]
+    df_temp_testing['bin'] = pd.qcut(np.array(df_temp_testing['soc']), 100)
+    soc_results_by_soc = df_temp_testing.groupby(['bin'])['soc_abs_error'].median().reset_index() 
+    temp_mean = df_temp_testing.groupby(['bin'])['soc_abs_error'].mean().reset_index()
+    temp_75 = df_temp_testing.groupby(['bin'])['soc_abs_error'].quantile(0.95).reset_index()
+    temp_25 = df_temp_testing.groupby(['bin'])['soc_abs_error'].quantile(0.05).reset_index()
+    soc_results_by_soc['soc_median_abs_err'] = soc_results_by_soc['soc_abs_error'] 
+    soc_results_by_soc['soc_mean_abs_err'] = temp_mean['soc_abs_error'] 
+    soc_results_by_soc['soc_q75_abs_err'] = temp_75['soc_abs_error'] 
+    soc_results_by_soc['soc_q25_abs_err'] = temp_25['soc_abs_error']
+    midpoints = []
+    for index, row in soc_results_by_soc.iterrows():
+        midpoints.append(row['bin'].mid)
+    soc_results_by_soc['midpoint'] = midpoints
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_median_abs_err'], color='blue', label='median error') 
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_mean_abs_err'], color='cyan', label='mean error') 
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_925_abs_err'], color='magenta', linestyle='--', label='5th quantile') 
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q75_abs_err'], color='magenta', linestyle='--', label='95th quantile') 
+    plt.xlabel('State Of Charge') 
+    plt.ylabel('Absolute Error')
+    t = 'Absolute Error over State of Charge (Charging)'
+    plt.title(t)
+    plt.legend()
+    plt.show()
+
+    df_temp_testing = df[df['is_charge'] == False]
+    df_temp_testing['bin'] = pd.qcut(np.array(df_temp_testing['soc']), 100)
+    soc_results_by_soc = df_temp_testing.groupby(['bin'])['soc_abs_error'].median().reset_index() 
+    temp_mean = df_temp_testing.groupby(['bin'])['soc_abs_error'].mean().reset_index()
+    temp_75 = df_temp_testing.groupby(['bin'])['soc_abs_error'].quantile(0.95).reset_index()
+    temp_25 = df_temp_testing.groupby(['bin'])['soc_abs_error'].quantile(0.05).reset_index()
+    soc_results_by_soc['soc_median_abs_err'] = soc_results_by_soc['soc_abs_error'] 
+    soc_results_by_soc['soc_mean_abs_err'] = temp_mean['soc_abs_error'] 
+    soc_results_by_soc['soc_q75_abs_err'] = temp_75['soc_abs_error'] 
+    soc_results_by_soc['soc_q25_abs_err'] = temp_25['soc_abs_error']
+    midpoints = []
+    for index, row in soc_results_by_soc.iterrows():
+        midpoints.append(row['bin'].mid)
+    soc_results_by_soc['midpoint'] = midpoints
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_median_abs_err'], color='blue', label='median error') 
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_mean_abs_err'], color='cyan', label='mean error') 
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_925_abs_err'], color='magenta', linestyle='--', label='5th quantile') 
+    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q75_abs_err'], color='magenta', linestyle='--', label='95th quantile') 
+    plt.xlabel('State Of Charge') 
+    plt.ylabel('Absolute Error')
+    t = 'Absolute Error over State of Charge (Discharging)'
+    plt.title(t)
+    plt.legend()
+    plt.show()
