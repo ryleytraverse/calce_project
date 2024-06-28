@@ -65,12 +65,12 @@ def print_results(df_results, show_soc, show_soh):
         print('R Squared:', r2_score(y_soc, pred_soc))
 
 # Show plots of state of charge accuracy over cycle and state of charge
-def plot_soc_stuff(df, data_name):
+def plot_soc_stuff(df):
     # State of charge accuracy over cycle
     df['soc_abs_error'] = abs(df['soc']-df['soc_prediction'])
     soc_results_by_cycle = df.groupby('cycle_num')['soc_abs_error'].mean().reset_index() 
     plt.scatter(soc_results_by_cycle['cycle_num'], soc_results_by_cycle['soc_abs_error'], color='blue')
-    plt.title('SOC Mean Absolute Error Over Cycle')
+    plt.title('SOC Prediction Mean Absolute Error Over Cycle for Cell #37')
     plt.xlabel('Cycle')
     plt.ylabel('SOC Mean Absolute Error')
     plt.show()
@@ -90,16 +90,16 @@ def plot_soc_stuff(df, data_name):
     for index, row in soc_results_by_soc.iterrows():
         midpoints.append(row['bin'].mid)
     soc_results_by_soc['midpoint'] = midpoints
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_median_abs_err'], color='blue', label='median error') 
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_mean_abs_err'], color='cyan', label='mean error') 
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_925_abs_err'], color='magenta', linestyle='--', label='5th quantile') 
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q75_abs_err'], color='magenta', linestyle='--', label='95th quantile') 
-    plt.xlabel('State Of Charge') 
-    plt.ylabel('Absolute Error')
-    t = 'Absolute Error over State of Charge (Charging)'
-    plt.title(t)
-    plt.legend()
-    plt.show()
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    ax[0].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_mean_abs_err'], color='cyan', label='mean error')
+    ax[0].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_median_abs_err'], color='blue', label='median error') 
+    ax[0].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q25_abs_err'], color='red', linestyle='--', label='5th quantile', alpha = 0.7) 
+    ax[0].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q75_abs_err'], color='red', linestyle='--', label='95th quantile', alpha = 0.7) 
+    ax[0].set_xlabel('State Of Charge') 
+    ax[0].set_ylabel('Absolute Error')
+    t = 'Prediction Absolute Error over State of Charge (Charging) for Cell #37'
+    ax[0].set_title(t)
+    ax[0].legend()
 
     # State of charge accuracy over state of charge (discharge)
     df_temp_testing = df[df['is_charge'] == False]
@@ -115,14 +115,14 @@ def plot_soc_stuff(df, data_name):
     midpoints = []
     for index, row in soc_results_by_soc.iterrows():
         midpoints.append(row['bin'].mid)
-    soc_results_by_soc['midpoint'] = midpoints
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_median_abs_err'], color='blue', label='median error') 
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_mean_abs_err'], color='cyan', label='mean error') 
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_925_abs_err'], color='magenta', linestyle='--', label='5th quantile') 
-    plt.plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q75_abs_err'], color='magenta', linestyle='--', label='95th quantile') 
-    plt.xlabel('State Of Charge') 
-    plt.ylabel('Absolute Error')
-    t = 'Absolute Error over State of Charge (Discharging)'
-    plt.title(t)
-    plt.legend()
+    soc_results_by_soc['midpoint'] = midpoints 
+    ax[1].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_mean_abs_err'], color='cyan', label='mean error')
+    ax[1].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_median_abs_err'], color='blue', label='median error')
+    ax[1].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q25_abs_err'], color='red', linestyle='--', label='5th quantile', alpha=0.7) 
+    ax[1].plot(soc_results_by_soc['midpoint'], soc_results_by_soc['soc_q75_abs_err'], color='red', linestyle='--', label='95th quantile', alpha=0.7) 
+    ax[1].set_xlabel('State Of Charge') 
+    ax[1].set_ylabel('Absolute Error')
+    t = 'Prediction Absolute Error over State of Charge (Discharging) for Cell #37'
+    ax[1].set_title(t)
+    ax[1].legend()
     plt.show()
