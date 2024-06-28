@@ -43,11 +43,11 @@ def plot_subcycle_data(df_subcycle:pd.DataFrame, current_name:str, voltage_name:
     plt.show()
 
 # Print Accuracy Metrics for SOC or SOH
-def print_results(df_results, title_name, show_soc, show_soh):
+def print_results(df_results, show_soc, show_soh):
     if show_soh:
         y_soh = df_results[df_results['for_soc'] == False]['soh'] 
-        pred_soh = df_results[df_results['for_soc'] == False]['soh prediction']
-        print('SOH Predictions:')
+        pred_soh = df_results[df_results['for_soc'] == False]['soh_prediction']
+        print('SOH Prediction Accuracy:')
         print('Mean Absolute Error:', mean_absolute_error(y_soh, pred_soh))
         print('Root Mean Squared Error:', np.sqrt(mean_squared_error(y_soh, pred_soh))) 
         print('Median Absolute Error:', median_absolute_error(y_soh, pred_soh))
@@ -57,7 +57,7 @@ def print_results(df_results, title_name, show_soc, show_soh):
     if show_soc:
         y_soc = df_results[df_results['for_soc'] == True]['soc']
         pred_soc = df_results[df_results['for_soc'] == True]['soc_prediction']
-        print('SOC Predictions:')
+        print('SOC Prediction Accuracy:')
         print('Mean Absolute Error:', mean_absolute_error(y_soc, pred_soc))
         print('Root Mean Squared Error: ', np.sqrt(mean_squared_error(y_soc, pred_soc))) 
         print('Median Absolute Error:', median_absolute_error(y_soc, pred_soc))

@@ -136,11 +136,10 @@ def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound
                         df_scale[features] -scaler.transform(df_scale[features]) 
                     values_to_add_current = add_list + list(df_scale[features[0]])
                     values_to_add_voltage = add_list + list(df_scale[features[1]])
-                    values_to_add_temp = add_list + list(df_scale[features[2]])
-                    values_to_add = np.array([np.array(values_to_add_current), np.array(values_to_add_voltage), np.array(values_to_add_temp)]) 
+                    values_to_add = np.array([np.array(values_to_add_current), np.array(values_to_add_voltage)]) 
                     values_to_add = values_to_add.transpose()
                     X = np.append(X, values_to_add)
-                    if df_scale['Step_Index'].iloc[-1].isin([2, 4]):
+                    if int(df_scale['Step_Index'].iloc[-1]) == 2 or int(df_scale['Step_Index'].iloc[-1]) == 2:
                         is_charge = True
                     else:
                         is_charge = False
@@ -154,13 +153,13 @@ def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound
                 df_scale = df_cycle[(df_cycle['Step_Index'].isin([2, 4])) & (df_cycle['Voltage(V)'] >= soh_lower_bound)].iloc[:seq_len] 
                 df_scale[features] = scaler.transform(df_scale[features])
                 X = np.append(X, df_scale[features].to_numpy())
-                df_soh.loc[len(df_soh)] [c, True, False, float(df_scale['Test_Time(s)'].iloc[-1]), float(df_scale['State_of_Health'].iloc[-1]), float(df_scale['State_of_Charge'].iloc[-1])]
+                df_soh.loc[len(df_soh)] = [c, True, False, float(df_scale['Test_Time(s)'].iloc[-1]), float(df_scale['State_of_Health'].iloc[-1]), float(df_scale['State_of_Charge'].iloc[-1])]
             else:
                 for x in range(0, length_vr-seq_len+1, soh_break):
                     df_scale = df_voltage_range.iloc[x:seq_len+x]
                     df_scale[features] = scaler.transform(df_scale[features])
                     X = np.append(X, df_scale[features].to_numpy())
-                    df_soh.loc[len(df_soh)] [c, True, False, float(df_scale['Test_Time(s)'].iloc[-1]), float(df_scale['State_of_Health'].iloc[-1]), float(df_scale['State_of_Charge'].iloc[-1])]
+                    df_soh.loc[len(df_soh)] = [c, True, False, float(df_scale['Test_Time(s)'].iloc[-1]), float(df_scale['State_of_Health'].iloc[-1]), float(df_scale['State_of_Charge'].iloc[-1])]
 
     X = np.reshape(X, (-1, seq_len, len(features)))
     y_soh = df_soh['soh'].to_numpy()
