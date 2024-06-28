@@ -76,9 +76,9 @@ def plot_soh_stuff(df):
     ax[0].scatter(soh_consolidated_preds['cycle_num'], soh_consolidated_preds['soh'], color='blue', s = 10, label = 'true soh')
     ax[0].scatter(soh_consolidated_preds['cycle_num'], soh_consolidated_preds['median_soh'], color='cyan', s = 10, label = 'predicted soh')
     ax[0].legend()
-    ax[0].add_xlabel('Cycle')
-    ax[0].add_ylabel('State of Health')
-    ax[0].add_title('State of Health Prediction vs Truth for Cell #37')
+    ax[0].set_xlabel('Cycle')
+    ax[0].set_ylabel('State of Health')
+    ax[0].set_title('State of Health Prediction vs Truth for Cell #37')
 
     ax[1].scatter(soh_consolidated_preds['cycle_num'], abs(soh_consolidated_preds['soh']-soh_consolidated_preds['median_soh']), color='blue', s = 10)
     ax[1].set_xlabel('Cycle')
