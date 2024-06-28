@@ -78,7 +78,7 @@ def filter_outliers_local(df: pd.DataFrame, cols: list, std_window: int, diff_wi
     return pd.concat(df_cleaned)
 
 # Calculate which cycle each battery reaches 80% state of health (eol)
-def create_target(df:pd.DataFrame, eol:float) -> pd.DataFrame:
+def caclulate_eol_and_chop(df:pd.DataFrame, eol:float) -> pd.DataFrame:
     df_remove = df.loc[df['discharge_capacity'] <= eol]
     cycle = min(df_remove['cycle'])
     df['eol_cycle'] = cycle
@@ -119,10 +119,9 @@ def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound
                 for x in range(df_cycle.shape[0]): 
                     if x+1<seq_len:
                         len_diff = seq_len-x-1
-                        add_list = [-999] * len_diff 
+                        add_list = [-2] * len_diff 
                         df_scale = df_cycle.iloc[:x+1]
                         soh_label = float(df_scale['State_of_Health'].iloc[-1])
-                        #soh_label = float(0)
                         df_scale[features] = scaler.transform(df_scale[features])
                     else:
                         start = x+1-seq_len
@@ -132,7 +131,6 @@ def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound
                             soh_label = float(df_scale['State_of_Health'].iloc[-1])
                         else:
                             soh_label = float(df_scale['State_of_Health'].iloc[-1])
-                            #soh_label = float(0)
                         df_scale[features] -scaler.transform(df_scale[features]) 
                     values_to_add_current = add_list + list(df_scale[features[0]])
                     values_to_add_voltage = add_list + list(df_scale[features[1]])
