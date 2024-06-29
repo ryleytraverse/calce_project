@@ -119,21 +119,23 @@ def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound
                 for x in range(df_cycle.shape[0]): 
                     if x+1<seq_len:
                         len_diff = seq_len-x-1
-                        add_list = [-2] * len_diff 
+                        add_list_cur = [0.55] * len_diff
+                        add_list_vol = [3.5] * len_diff
                         df_scale = df_cycle.iloc[:x+1]
                         soh_label = float(df_scale['State_of_Health'].iloc[-1])
                         df_scale[features] = scaler.transform(df_scale[features])
                     else:
                         start = x+1-seq_len
-                        add_list = []
+                        add_list_cur = []
+                        add_list_vol = []
                         df_scale = df_cycle.iloc[start:x+1]
                         if len(df_scale[(df_scale['Step_Index'].isin([2, 4])) & (df_scale['Voltage(V)'] >= soh_lower_bound) & (df_scale['Voltage(V)'] <= soh_upper_bound)]) == seq_len:
                             soh_label = float(df_scale['State_of_Health'].iloc[-1])
                         else:
                             soh_label = float(df_scale['State_of_Health'].iloc[-1])
                         df_scale[features] -scaler.transform(df_scale[features]) 
-                    values_to_add_current = add_list + list(df_scale[features[0]])
-                    values_to_add_voltage = add_list + list(df_scale[features[1]])
+                    values_to_add_current = add_list_cur + list(df_scale[features[0]])
+                    values_to_add_voltage = add_list_vol + list(df_scale[features[1]])
                     values_to_add = np.array([np.array(values_to_add_current), np.array(values_to_add_voltage)]) 
                     values_to_add = values_to_add.transpose()
                     X = np.append(X, values_to_add)
