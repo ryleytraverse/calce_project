@@ -77,7 +77,7 @@ def filter_outliers_local(df: pd.DataFrame, cols: list, std_window: int, diff_wi
 
     return pd.concat(df_cleaned)
 
-# Calculate which cycle each battery reaches 80% state of health (eol)
+# Calculate which cycle each battery reaches defined state of health (eol) (80% in our case)
 def caclulate_eol_and_chop(df:pd.DataFrame, eol:float) -> pd.DataFrame:
     df_remove = df.loc[df['discharge_capacity'] <= eol]
     cycle = min(df_remove['cycle'])
@@ -86,7 +86,7 @@ def caclulate_eol_and_chop(df:pd.DataFrame, eol:float) -> pd.DataFrame:
     df['eol_cycle'] = df['eol_cycle'].astype(int)
     return df
 
-# Add target features of state of health and state of charge
+# Calculate target features of state of health and state of charge
 # Exclude unusually short/long running experiments (partial charges)
 def calculate_soc_soh(df:pd.DataFrame, df_subcycle:pd.DataFrame, nominal_capacity:float):
     df_final = pd.DataFrame()
@@ -108,7 +108,27 @@ def calculate_soc_soh(df:pd.DataFrame, df_subcycle:pd.DataFrame, nominal_capacit
     return df_final, df
 
 # Create numpy array of data for modeling
-def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound, soh_upper_bound, soc_cycle_list, soh_break): 
+def get_X_y_soh(df:pd.DataFrame, scaler, features:list, add_soh:bool, add_soc:bool, seq_len:int, soh_lower_bound:float, soh_upper_bound:float, soc_cycle_list:list, soh_break:int):
+    """
+    INPUTS:
+    df -> pandas dataframe with subcycle info (voltage current measurements during charge/discharge)
+    scaler -> sklearn StandardScaler fit to training data for voltage and current features
+    features -> feature list (voltage and current column names)
+    add_soh -> bool to add soh data range data
+    add_soc -> bool to add full cylce soc data from cycles defined in soc_cycle_list
+    seq_len -> sequence length of data
+    soh_lower_bound -> soh voltage range lower bound
+    soh_upper_bound -> soh voltage range upper bound
+    soc_cycle_list -> list of cycles to add full cycle soc representation
+    soh_break -> how many data points to skip between measurements when adding data for soh in voltage range
+    """
+    """
+    OUTPUTS:
+    df_soh -> pandas dataframe with necessary features for adding and analyzing predictions
+    X -> numpy array of voltage and current measurements
+    y_soh -> numpy array of soh target readings corresponding to X
+    y_soh -> numpy array of soc target readings corresponding to X
+    """
     df_soh = pd.DataFrame(columns=['cycle_num', 'is_charge', 'for_soc', 'charge_time', 'soh', 'soc'])
     X = np.array([])
     cycle_list = list(df.Cycle_Index.unique())

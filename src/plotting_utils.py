@@ -42,7 +42,7 @@ def plot_subcycle_data(df_subcycle:pd.DataFrame, current_name:str, voltage_name:
     plt.show()
 
 # Print Accuracy Metrics for SOC or SOH
-def print_results(df_results, show_soc, show_soh):
+def print_results(df_results:pd.DataFrame, show_soc:bool, show_soh:bool):
     if show_soh:
         y_soh = df_results[df_results['for_soc'] == False]['soh'] 
         pred_soh = df_results[df_results['for_soc'] == False]['soh_prediction']
@@ -61,15 +61,15 @@ def print_results(df_results, show_soc, show_soh):
         print('Median Absolute Error:', median_absolute_error(y_soc, pred_soc))
         print('R Squared:', r2_score(y_soc, pred_soc))
 
-# Get average and mean soh prediction per cycle
+# Get average and mean SOH prediction per cycle
 def average_soh_prediction(g):
     average_soh = np.mean(g['soh_prediction'])
     median_soh = np.median(g['soh_prediction'])
     soh = float(g['soh'].iloc[0])
     return pd.Series(dict(soh=soh, average_soh=average_soh, median_soh = median_soh))
 
-# Plot soh performance
-def plot_soh_stuff(df):
+# Plot SOH performance
+def plot_soh_stuff(df:pd.DataFrame):
     soh_consolidated_preds = df.groupby('cycle_num').apply(average_soh_prediction).reset_index()
 
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
@@ -86,8 +86,8 @@ def plot_soh_stuff(df):
     ax[1].set_title('State of Health Absolute Error for Cell #37')
     plt.show()
 
-# Plot soc performance
-def plot_soc_stuff(df, plot_cycle1, plot_cycle2):
+# Plot SOC performance
+def plot_soc_stuff(df:pd.DataFrame, plot_cycle1:int, plot_cycle2:int):
     # State of charge accuracy over cycle
     df['soc_abs_error'] = abs(df['soc']-df['soc_prediction'])
     soc_results_by_cycle = df.groupby('cycle_num')['soc_abs_error'].mean().reset_index() 
@@ -147,6 +147,7 @@ def plot_soc_stuff(df, plot_cycle1, plot_cycle2):
     ax[1].legend()
     plt.show()
 
+    # Plot two cycles of SOC prediction
     df_cycle_50 = df[df['cycle_num']==plot_cycle1]
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
     ax[0].scatter(df_cycle_50['charge_time'], df_cycle_50['soc'], color='blue', label = 'true soc')
