@@ -1,11 +1,18 @@
+# Storing large/important parameters used in multiple places in the code
+
+# Columns for undergoing outlier detection
 col_for_filtering = ['charge_capacity', 'discharge_capacity', 'charge_energy', 'discharge_energy', 'voltage', 'current']
+# Setting outlier detection parameters
 std_window = 3
 diff_window = 21
 iqr_cut = 1.5
 
+# Defining soh eol cutoff
 eol = 0.8
+# Defining cell nominal capacity for Prismatic CS2 cells
 nominal_capacity = 1.1
 
+# Define excel file dates that exist for each battery 
 cs2_35_dates = ['8_17_10', '8_18_10', '8_19_10', '8_30_10', 
                 '9_7_10', '9_8_10', '9_21_10', '9_30_10', 
                 '10_15_10', '10_22_10', '10_29_10', 
