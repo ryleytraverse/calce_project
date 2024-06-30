@@ -107,7 +107,7 @@ def calculate_soc_soh(df:pd.DataFrame, df_subcycle:pd.DataFrame, nominal_capacit
             df_final = pd.concat([df_final, df_sub])
     return df_final, df
 
-# Create numpy array of data for modelling
+# Create numpy array of data for modeling
 def get_X_y_soh(df, scaler, features, add_soh, add_soc, seq_len, soh_lower_bound, soh_upper_bound, soc_cycle_list, soh_break): 
     df_soh = pd.DataFrame(columns=['cycle_num', 'is_charge', 'for_soc', 'charge_time', 'soh', 'soc'])
     X = np.array([])
